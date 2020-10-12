@@ -667,6 +667,7 @@ GITHUB_COMMIT_SOURCE = True
 # If you don't use an absolute path, it will be considered as relative
 # to the location of conf.py
 # OUTPUT_FOLDER = 'output'
+OUTPUT_FOLDER = 'docs'
 
 # where the "cache" of partial generated content should be located
 # default: 'cache'
