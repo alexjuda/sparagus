@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?xml-stylesheet type="text/xsl" href="assets/xml/rss.xsl" media="all"?><rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>sparagus</title><link>https://example.com/</link><description>Lessons I've learned while doing my side-projects.</description><atom:link href="https://example.com/rss.xml" rel="self" type="application/rss+xml"></atom:link><language>en</language><copyright>Contents © 2020 &lt;a href="mailto:alexanderjuda@gmail.com"&gt;Alex Juda&lt;/a&gt; </copyright><lastBuildDate>Mon, 12 Oct 2020 20:24:33 GMT</lastBuildDate><generator>Nikola (getnikola.com)</generator><docs>http://blogs.law.harvard.edu/tech/rss</docs><item><title>NLU is just slot filling</title><link>https://example.com/posts/nlu-is-just-slot-filling/</link><dc:creator>Alex Juda</dc:creator><description>&lt;div&gt;&lt;h2&gt;Intro&lt;/h2&gt;
+&lt;p&gt;This post is a compilation of my ideas about how NLU should look like in a task-oriented dialog system.
+Any statement without a link is my opinion.&lt;/p&gt;
+&lt;h3&gt;tl;dr&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href="https://en.wikipedia.org/wiki/Natural-language_understanding"&gt;NLU&lt;/a&gt; is actually just slot filling&lt;/li&gt;
+&lt;li&gt;use &lt;a href="https://en.wikipedia.org/wiki/Named-entity_recognition"&gt;NER&lt;/a&gt; + grammars and a whole text classifier&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2&gt;Context&lt;/h2&gt;
+&lt;p&gt;Let's say you're building a &lt;a href="https://en.wikipedia.org/wiki/Dialogue_system"&gt;dialog system&lt;/a&gt; to allow customers of some company to get things done without talking to a real human in a call center.
+Chances are you're going to use a &lt;a href="https://arxiv.org/pdf/2003.07490.pdf"&gt;task-oriented dialog system&lt;/a&gt; framework to build your software. Its architecture looks like a tuning fork:&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="https://example.com/images/dialog_system_tuning_fork.svg"&gt;&lt;/p&gt;
+&lt;p&gt;There are many ways to implement components of such system, e.g. a dialog manager can be &lt;a href="https://web.stanford.edu/~jurafsky/slp3/24.pdf"&gt;rule-based&lt;/a&gt;, &lt;a href="https://lekta.ai/"&gt;graph-based&lt;/a&gt;, or a &lt;a href="https://rasa.com/docs/rasa/stories"&gt;supervised ML model&lt;/a&gt;. 
+The component we'll focus on for the sake of this post is NLU; usually, it's a subsystem bounded by having user utterance text as an input (sometimes with additional dialog context information) and producing a &lt;a href="https://hao-fang.github.io/ee596_spr2018/slides/week_2-spoken_language_understanding.pdf"&gt;semantic frame&lt;/a&gt;, structured representation of a user utterance usable by dialog manager to update the dialog state and drive the further conversation.&lt;/p&gt;
+&lt;h2&gt;Slots and entities&lt;/h2&gt;
+&lt;p&gt;What data exactly and in what shape is contained in a semantic frame differs between the implementations, but it can be generalized to a collection of key-value pairs that I'll call &lt;em&gt;slot fills&lt;/em&gt;. 
+An example semantic frame for a first utterance in a flight booking assistant application could look like this:&lt;/p&gt;
+&lt;pre class="code literal-block"&gt;&lt;span class="n"&gt;nlu&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;"yo, tell me what flights to Berlin are available next week"&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="o"&gt;-&amp;gt;&lt;/span&gt;
+&lt;span class="p"&gt;[[&lt;/span&gt;&lt;span class="s2"&gt;"courtesy"&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s2"&gt;"greeting"&lt;/span&gt;&lt;span class="p"&gt;],&lt;/span&gt;
+ &lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="s2"&gt;"intent"&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s2"&gt;"search_flights"&lt;/span&gt;&lt;span class="p"&gt;],&lt;/span&gt;
+ &lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="s2"&gt;"flight_destination"&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s2"&gt;"Berlin"&lt;/span&gt;&lt;span class="p"&gt;],&lt;/span&gt;
+ &lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="s2"&gt;"flight_window_start"&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s2"&gt;"2020-10-12T00:00:00+02:00"&lt;/span&gt;&lt;span class="p"&gt;],&lt;/span&gt;
+ &lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="s2"&gt;"flight_window_end"&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s2"&gt;"2020-10-19T00:00:00+02:00"&lt;/span&gt;&lt;span class="p"&gt;]]&lt;/span&gt;
+&lt;/pre&gt;
+&lt;p&gt;A &lt;em&gt;slot&lt;/em&gt; can be thought of as an atomic information container. 
+A &lt;em&gt;dialog task&lt;/em&gt; (AKA &lt;em&gt;dialog strategy&lt;/em&gt;, &lt;em&gt;dialog skill&lt;/em&gt;) defines the bot's behavior by reacting to slot state changes and requesting slot values from the user in a form of an explicit prompt, or an external system e.g. in a form of HTTP requests.&lt;/p&gt;
+&lt;p&gt;Slots can be divided into two groups depending on the nature of the data that they accept:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;Non-categorical slots. 
+   You need to parse the underlying text to extract the value in a structured format, so you do care where exactly in the utterance this information occurs.
+   Usually, it's difficult to enumerate each possible value a non-categorical slot can take.
+   Non-categorical slots accept time, date, number, phone number, credit card number, etc.
+   In the above snippet, &lt;code&gt;flight_destination&lt;/code&gt;, &lt;code&gt;flight_window_start&lt;/code&gt;, and &lt;code&gt;flight_window_end&lt;/code&gt; are examples of this.&lt;/li&gt;
+&lt;li&gt;Categorical slots. 
+   These are slots that accept a value from a well-defined set of possible cases (think of an enum).
+   You only care &lt;em&gt;what&lt;/em&gt; value occurred, not &lt;em&gt;where&lt;/em&gt; it occurred in the utterance.
+   In the above snippet, &lt;code&gt;courtesy&lt;/code&gt; and &lt;code&gt;intent&lt;/code&gt; are examples of this.&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;Non-categorical slots are similar to &lt;em&gt;entities&lt;/em&gt; in the &lt;a href="https://en.wikipedia.org/wiki/Named-entity_recognition"&gt;NER&lt;/a&gt; problem.
+The difference is that NER usually concerns universally accepted entities, like &lt;em&gt;person&lt;/em&gt;, &lt;em&gt;date&lt;/em&gt;, or &lt;em&gt;place&lt;/em&gt;. 
+Slots are project-dependent and a single dialog system can contain multiple slots that accept similar, but distinct values, like &lt;em&gt;flight window start&lt;/em&gt; and &lt;em&gt;flight window end&lt;/em&gt;, or &lt;em&gt;flight departure&lt;/em&gt; and &lt;em&gt;flight destination&lt;/em&gt;.
+Another variation is that NER returns merely the location of an entity in the utterance and a slot needs a structured value, not a free-form utterance substring.&lt;/p&gt;
+&lt;p&gt;While conceptually different, we'll use tools that train NER models to train a token tagger model to recognize project-specific slot locations.&lt;/p&gt;
+&lt;h2&gt;Slot filling model&lt;/h2&gt;
+&lt;p&gt;The overall data pipeline looks like this.&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="https://example.com/images/slot_filling_model_overall.svg"&gt;&lt;/p&gt;&lt;/div&gt;</description><guid>https://example.com/posts/nlu-is-just-slot-filling/</guid><pubDate>Mon, 12 Oct 2020 20:08:11 GMT</pubDate></item></channel></rss>
