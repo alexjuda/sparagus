@@ -1,0 +1,11 @@
+# macOS
+.DS_Store
+
+# python
+*.pyc
+__pycache__
+
+# nikola
+/.doit.db
+/output
+/cache
