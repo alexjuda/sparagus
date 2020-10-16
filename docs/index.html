@@ -95,9 +95,9 @@ An example semantic frame for a first utterance in a flight booking assistant ap
 <span class="o">-&gt;</span>
 <span class="p">[[</span><span class="s2">"courtesy"</span><span class="p">,</span> <span class="s2">"greeting"</span><span class="p">],</span>
  <span class="p">[</span><span class="s2">"intent"</span><span class="p">,</span> <span class="s2">"search_flights"</span><span class="p">],</span>
- <span class="p">[</span><span class="s2">"flight_destination"</span><span class="p">,</span> <span class="s2">"Berlin"</span><span class="p">],</span>
- <span class="p">[</span><span class="s2">"flight_window_start"</span><span class="p">,</span> <span class="s2">"2020-10-12T00:00:00+02:00"</span><span class="p">],</span>
- <span class="p">[</span><span class="s2">"flight_window_end"</span><span class="p">,</span> <span class="s2">"2020-10-19T00:00:00+02:00"</span><span class="p">]]</span>
+ <span class="p">[</span><span class="s2">"flight_destination_city"</span><span class="p">,</span> <span class="s2">"BER"</span><span class="p">],</span>
+ <span class="p">[</span><span class="s2">"flight_window_start"</span><span class="p">,</span> <span class="s2">"2020-10-12"</span><span class="p">],</span>
+ <span class="p">[</span><span class="s2">"flight_window_end"</span><span class="p">,</span> <span class="s2">"2020-10-19"</span><span class="p">]]</span>
 </pre>
 <p>A <em>slot</em> can be thought of as an atomic information container. 
 A <em>dialog task</em> (AKA <em>dialog strategy</em>, <em>dialog skill</em>) defines the bot's behavior by reacting to slot state changes and requesting slot values from the user in a form of an explicit prompt, or an external system e.g. in a form of HTTP requests.</p>
@@ -107,7 +107,8 @@ A <em>dialog task</em> (AKA <em>dialog strategy</em>, <em>dialog skill</em>) def
    You need to parse the underlying text to extract the value in a structured format, so you do care where exactly in the utterance this information occurs.
    Usually, it's difficult to enumerate each possible value a non-categorical slot can take.
    Non-categorical slots accept time, date, number, phone number, credit card number, etc.
-   In the above snippet, <code>flight_destination</code>, <code>flight_window_start</code>, and <code>flight_window_end</code> are examples of this.</li>
+   In the above snippet, <code>flight_destination</code>, <code>flight_window_start</code>, and <code>flight_window_end</code> are examples of this.
+   The task of detecting these is <a href="http://www.iro.umontreal.ca/~lisa/pointeurs/taslp_RNNSLU_final_doubleColumn.pdf">traditionally called</a> slot filling, but IMHO it's not enough.</li>
 <li>Categorical slots. 
    These are slots that accept a value from a well-defined set of possible cases (think of an enum).
    You only care <em>what</em> value occurred, not <em>where</em> it occurred in the utterance.
@@ -119,8 +120,109 @@ Slots are project-dependent and a single dialog system can contain multiple slot
 Another variation is that NER returns merely the location of an entity in the utterance and a slot needs a structured value, not a free-form utterance substring.</p>
 <p>While conceptually different, we'll use tools that train NER models to train a token tagger model to recognize project-specific slot locations.</p>
 <h2>Slot filling model</h2>
-<p>The overall data pipeline looks like this.</p>
+<p>The overall pipeline looks like this.</p>
 <p><img alt="" src="images/slot_filling_model_overall.svg"></p>
+<h3>Span Recognizer</h3>
+<p>It's a box that detects what slots are mentioned in the text and returns the substring positions.
+Assuming a standard word tokenization, an example slot recognition can look like this:</p>
+<pre class="code literal-block"><span class="c1"># word index     0   1    2  3    4       5  6      7   8         9    10</span>
+<span class="n">span_recognizer</span><span class="p">(</span><span class="s2">"yo, tell me what flights to Berlin are available next week"</span><span class="p">)</span>
+<span class="c1"># spans                                      &lt;-A--&gt;               &lt;---B---&gt;</span>
+<span class="c1">#                                                                 &lt;---C---&gt;</span>
+<span class="o">-&gt;</span>
+<span class="p">[[</span><span class="s2">"flight_destination_city"</span><span class="p">,</span> <span class="p">[</span><span class="mi">6</span><span class="p">,</span> <span class="mi">1</span><span class="p">]],</span>  <span class="c1"># span A</span>
+ <span class="p">[</span><span class="s2">"flight_window_start"</span><span class="p">,</span> <span class="p">[</span><span class="mi">9</span><span class="p">,</span> <span class="mi">2</span><span class="p">]],</span> <span class="c1"># span B</span>
+ <span class="p">[</span><span class="s2">"flight_window_end"</span><span class="p">,</span> <span class="p">[</span><span class="mi">9</span><span class="p">,</span> <span class="mi">2</span><span class="p">]]]</span>   <span class="c1"># span C</span>
+</pre>
+<p>If you ever <a href="https://demo.allennlp.org/named-entity-recognition/MjMyNjk4Mg==">played with a NER model</a> this should look familiar.</p>
+<p>We'll build Span Recognizer as a supervised token classifier with following approaches:</p>
+<ul>
+<li>
+<p>Conditional Random Field – the way to do NER in classical ML</p>
+</li>
+<li>
+<p>fastText embeddings + LSTM – transfer learning to utilize pretrained knowledge about the world + an RNN to look at the token context in the utterance</p>
+</li>
+<li>
+<p>BERT or another transformer architecture (TBD)</p>
+</li>
+</ul>
+<p>See next posts for details.</p>
+<h3>Value Extractor</h3>
+<p>Value Extractor extracts structured value from utterance substring returned by Span Recognizer.</p>
+<p>Continuing the example about flight booking:</p>
+<pre class="code literal-block"><span class="n">value_extractor</span><span class="p">(</span><span class="s2">"yo, tell me what flights to Berlin are available next week"</span><span class="p">,</span> <span class="s2">"flight_destination_city"</span><span class="p">,</span> <span class="p">[</span><span class="mi">6</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
+<span class="o">-&gt;</span>
+<span class="p">[</span><span class="s2">"flight_destination_city"</span><span class="p">,</span> <span class="s2">"BER"</span><span class="p">]</span>
+
+<span class="n">value_extractor</span><span class="p">(</span><span class="s2">"yo, tell me what flights to Berlin are available next week"</span><span class="p">,</span> <span class="s2">"flight_window_start"</span><span class="p">,</span> <span class="p">[</span><span class="mi">9</span><span class="p">,</span> <span class="mi">2</span><span class="p">])</span>
+<span class="o">-&gt;</span>
+<span class="p">[</span><span class="s2">"flight_window_start"</span><span class="p">,</span> <span class="s2">"2020-10-12"</span><span class="p">]</span>
+
+<span class="n">value_extractor</span><span class="p">(</span><span class="s2">"yo, tell me what flights to Berlin are available next week"</span><span class="p">,</span> <span class="s2">"flight_window_end"</span><span class="p">,</span> <span class="p">[</span><span class="mi">9</span><span class="p">,</span> <span class="mi">2</span><span class="p">])</span>
+<span class="o">-&gt;</span>
+<span class="p">[</span><span class="s2">"flight_window_end"</span><span class="p">,</span> <span class="s2">"2020-10-19"</span><span class="p">]</span>
+</pre>
+<p>Another example in a top up dialog could look like this:</p>
+<pre class="code literal-block"><span class="c1">#                0    1  2 3   4  5   6  7</span>
+<span class="n">value_extractor</span><span class="p">(</span><span class="s2">"make me a top up for 20 bucks"</span><span class="p">,</span> <span class="s2">"top_up_value"</span><span class="p">,</span> <span class="p">[</span><span class="mi">6</span><span class="p">,</span> <span class="mi">2</span><span class="p">])</span>
+<span class="o">-&gt;</span>
+<span class="p">[</span><span class="s2">"top_up_value"</span><span class="p">,</span> <span class="s2">"20"</span><span class="p">]</span>
+
+<span class="c1">#                0    1  2 3   4  5   6  7</span>
+<span class="n">value_extractor</span><span class="p">(</span><span class="s2">"make me a top up for 20 bucks"</span><span class="p">,</span> <span class="s2">"top_up_currency"</span><span class="p">,</span> <span class="p">[</span><span class="mi">6</span><span class="p">,</span> <span class="mi">2</span><span class="p">])</span>
+<span class="o">-&gt;</span>
+<span class="p">[</span><span class="s2">"top_up_currency"</span><span class="p">,</span> <span class="s2">"USD"</span><span class="p">]</span>
+</pre>
+<p>Like other black boxes in our diagram, Value Extractor is just an <em>interface</em>. The actual implementation is whatever makes sense for a given project, e.g.:</p>
+<ul>
+<li>regex + custom code</li>
+<li><a href="https://duckling.wit.ai/">rule-based</a></li>
+<li><a href="http://www.geonames.org/search.html?q=berlin&amp;country=">Geonames API</a></li>
+</ul>
+<h3>Classifier</h3>
+<p>It's a simple <a href="https://medium.com/@MageshDominator/machine-learning-based-multi-label-text-classification-9a0e17f88bb4">multi label text classifier</a> with a label mangling post processing.
+Text goes in, a list of predicted classes comes out.</p>
+<pre class="code literal-block"><span class="n">classifier</span><span class="p">(</span><span class="s2">"yo, tell me what flights to Berlin are available next week"</span><span class="p">)</span>
+<span class="o">-&gt;</span>
+<span class="p">[[</span><span class="s2">"courtesy"</span><span class="p">,</span> <span class="s2">"greeting"</span><span class="p">],</span>
+ <span class="p">[</span><span class="s2">"intent"</span><span class="p">,</span> <span class="s2">"search_flights"</span><span class="p">]]</span>
+
+<span class="n">classifier</span><span class="p">(</span><span class="s2">"make me a top up for 20 bucks"</span><span class="p">)</span>
+<span class="o">-&gt;</span>
+<span class="p">[[</span><span class="s2">"intent"</span><span class="p">,</span> <span class="s2">"top_up"</span><span class="p">]]</span>
+</pre>
+<p>The <em>mangling</em> can be needed because label encoders in many ML frameworks support labels in a form of simple strings.</p>
+<p>Let's say your dialog system consists of a couple of intents and categorical values. 
+All slots values can be enumerated:</p>
+<ul>
+<li><code>["intent", "top_up"]</code></li>
+<li><code>["intent", "search_flights"]</code></li>
+<li><code>["courtesy", "greeting"]</code></li>
+<li><code>["courtesy", "thank_you"]</code></li>
+<li><code>["travel_class", "business"]</code></li>
+<li><code>["travel_class", "premium_economy"]</code></li>
+<li><code>["travel_class", "economy"]</code></li>
+</ul>
+<p>It can be mangled, so that the classifier's label encoder only sees single strings:</p>
+<ul>
+<li><code>"intent/top_up"</code></li>
+<li><code>"intent/search_flights"</code></li>
+<li><code>"courtesy/greeting"</code></li>
+<li><code>"courtesy/thank_you"</code></li>
+<li><code>"travel_class/business"</code></li>
+<li><code>"travel_class/premium_economy"</code></li>
+<li><code>"travel_class/economy"</code></li>
+</ul>
+<p>Note that this is possible for data like intents or categorical variables because all values can be enumerated easily.
+It wouldn't be feasible to enumerate all 32-bit integers, even though it's theoretically possible:</p>
+<ul>
+<li><code>"top_up_value/0"</code></li>
+<li><code>"top_up_value/1"</code></li>
+<li><code>"top_up_value/2"</code></li>
+<li>...</li>
+<li><code>"top_up_value/4294967295"</code></li>
+</ul>
 </div>
     </div>
     </article>
@@ -139,6 +241,10 @@ Another variation is that NER returns merely the location of an entity in the ut
         captions: function(element) {
             return element.getElementsByTagName('img')[0].alt;
     }});
-    </script>
+    </script><script>
+    const path = window.location.pathname;
+    const url = 'https://sparagus.pythonanywhere.com/ping?path=' + window.location.pathname;
+    fetch(url, { mode: 'no-cors', cache: 'no-cache' });
+</script>
 </body>
 </html>

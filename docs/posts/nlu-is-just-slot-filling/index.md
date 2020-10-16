@@ -41,9 +41,9 @@ nlu("yo, tell me what flights to Berlin are available next week")
 ->
 [["courtesy", "greeting"],
  ["intent", "search_flights"],
- ["flight_destination", "Berlin"],
- ["flight_window_start", "2020-10-12T00:00:00+02:00"],
- ["flight_window_end", "2020-10-19T00:00:00+02:00"]]
+ ["flight_destination_city", "BER"],
+ ["flight_window_start", "2020-10-12"],
+ ["flight_window_end", "2020-10-19"]]
 ```
 
 A _slot_ can be thought of as an atomic information container. 
@@ -56,6 +56,7 @@ Slots can be divided into two groups depending on the nature of the data that th
    Usually, it's difficult to enumerate each possible value a non-categorical slot can take.
    Non-categorical slots accept time, date, number, phone number, credit card number, etc.
    In the above snippet, `flight_destination`, `flight_window_start`, and `flight_window_end` are examples of this.
+   The task of detecting these is [traditionally called](http://www.iro.umontreal.ca/~lisa/pointeurs/taslp_RNNSLU_final_doubleColumn.pdf) slot filling, but IMHO it's not enough.
 2. Categorical slots. 
    These are slots that accept a value from a well-defined set of possible cases (think of an enum).
    You only care _what_ value occurred, not _where_ it occurred in the utterance.
@@ -70,6 +71,126 @@ While conceptually different, we'll use tools that train NER models to train a t
 
 # Slot filling model
 
-The overall data pipeline looks like this.
+The overall pipeline looks like this.
 
 ![](/images/slot_filling_model_overall.svg)
+
+## Span Recognizer
+
+It's a box that detects what slots are mentioned in the text and returns the substring positions.
+Assuming a standard word tokenization, an example slot recognition can look like this:
+
+```python
+# word index     0   1    2  3    4       5  6      7   8         9    10
+span_recognizer("yo, tell me what flights to Berlin are available next week")
+# spans                                      <-A-->               <---B--->
+#                                                                 <---C--->
+->
+[["flight_destination_city", [6, 1]],  # span A
+ ["flight_window_start", [9, 2]], # span B
+ ["flight_window_end", [9, 2]]]   # span C
+```
+
+If you ever [played with a NER model](https://demo.allennlp.org/named-entity-recognition/MjMyNjk4Mg==) this should look familiar.
+
+We'll build Span Recognizer as a supervised token classifier with following approaches:
+
+- Conditional Random Field &ndash; the way to do NER in classical ML
+
+- fastText embeddings + LSTM &ndash; transfer learning to utilize pretrained knowledge about the world + an RNN to look at the token context in the utterance
+
+- BERT or another transformer architecture (TBD)
+
+See next posts for details.
+
+## Value Extractor
+
+Value Extractor extracts structured value from utterance substring returned by Span Recognizer.
+
+Continuing the example about flight booking:
+
+```python
+value_extractor("yo, tell me what flights to Berlin are available next week", "flight_destination_city", [6, 1])
+->
+["flight_destination_city", "BER"]
+
+value_extractor("yo, tell me what flights to Berlin are available next week", "flight_window_start", [9, 2])
+->
+["flight_window_start", "2020-10-12"]
+
+value_extractor("yo, tell me what flights to Berlin are available next week", "flight_window_end", [9, 2])
+->
+["flight_window_end", "2020-10-19"]
+```
+
+
+Another example in a top up dialog could look like this:
+
+```python
+#                0    1  2 3   4  5   6  7
+value_extractor("make me a top up for 20 bucks", "top_up_value", [6, 2])
+->
+["top_up_value", "20"]
+
+#                0    1  2 3   4  5   6  7
+value_extractor("make me a top up for 20 bucks", "top_up_currency", [6, 2])
+->
+["top_up_currency", "USD"]
+```
+
+Like other black boxes in our diagram, Value Extractor is just an _interface_. The actual implementation is whatever makes sense for a given project, e.g.:
+
+- regex + custom code
+- [rule-based](https://duckling.wit.ai/)
+- [Geonames API](http://www.geonames.org/search.html?q=berlin&country=)
+
+
+## Classifier
+
+It's a simple [multi label text classifier](https://medium.com/@MageshDominator/machine-learning-based-multi-label-text-classification-9a0e17f88bb4) with a label mangling post processing.
+Text goes in, a list of predicted classes comes out.
+
+
+```python
+classifier("yo, tell me what flights to Berlin are available next week")
+->
+[["courtesy", "greeting"],
+ ["intent", "search_flights"]]
+
+classifier("make me a top up for 20 bucks")
+->
+[["intent", "top_up"]]
+```
+
+The _mangling_ can be needed because label encoders in many ML frameworks support labels in a form of simple strings.
+
+Let's say your dialog system consists of a couple of intents and categorical values. 
+All slots values can be enumerated:
+
+- `["intent", "top_up"]`
+- `["intent", "search_flights"]`
+- `["courtesy", "greeting"]`
+- `["courtesy", "thank_you"]`
+- `["travel_class", "business"]`
+- `["travel_class", "premium_economy"]`
+- `["travel_class", "economy"]`
+
+It can be mangled, so that the classifier's label encoder only sees single strings:
+
+- `"intent/top_up"`
+- `"intent/search_flights"`
+- `"courtesy/greeting"`
+- `"courtesy/thank_you"`
+- `"travel_class/business"`
+- `"travel_class/premium_economy"`
+- `"travel_class/economy"`
+
+Note that this is possible for data like intents or categorical variables because all values can be enumerated easily.
+It wouldn't be feasible to enumerate all 32-bit integers, even though it's theoretically possible:
+
+- `"top_up_value/0"`
+- `"top_up_value/1"`
+- `"top_up_value/2"`
+- ...
+- `"top_up_value/4294967295"`
+

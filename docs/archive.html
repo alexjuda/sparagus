@@ -71,6 +71,10 @@ navbar-dark bg-dark
         captions: function(element) {
             return element.getElementsByTagName('img')[0].alt;
     }});
-    </script>
+    </script><script>
+    const path = window.location.pathname;
+    const url = 'https://sparagus.pythonanywhere.com/ping?path=' + window.location.pathname;
+    fetch(url, { mode: 'no-cors', cache: 'no-cache' });
+</script>
 </body>
 </html>
