@@ -2,6 +2,9 @@
 
 import time
 
+import _sparagus as sparagus
+import _sparagus.core
+
 # !! This is the configuration of Nikola. !! #
 # !!  You should edit it to your liking.  !! #
 
@@ -1233,6 +1236,8 @@ MARKDOWN_EXTENSIONS = ['markdown.extensions.fenced_code', 'markdown.extensions.c
 # in the default template (base.tmpl).
 # (translatable)
 # BODY_END = ""
+
+BODY_END = sparagus.core.make_analytics_snippet()
 
 # The possibility to extract metadata from the filename by using a
 # regular expression.
