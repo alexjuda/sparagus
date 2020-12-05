@@ -23,7 +23,7 @@ BLOG_AUTHOR = "Alex Juda"  # (translatable)
 BLOG_TITLE = "sparagus"  # (translatable)
 # This is the main URL for your site. It will be used
 # in a prominent link. Don't forget the protocol (http/https)!
-SITE_URL = "https://example.com/"
+SITE_URL = "https://alexjuda.github.io/sparagus/"
 # This is the URL where Nikola's output will be deployed.
 # If not set, defaults to SITE_URL
 # BASE_URL = "https://example.com/"
@@ -142,9 +142,11 @@ TRANSLATIONS_PATTERN = '{path}.{lang}.{ext}'
 
 NAVIGATION_LINKS = {
     DEFAULT_LANG: (
-        ("/archive.html", "Archive"),
-        ("/categories/", "Tags"),
-        ("/rss.xml", "RSS feed"),
+        ("/blog/", "blog"),
+        # ("/archive.html", "Archive"),
+        # ("/categories/", "Tags"),
+        # ("/rss.xml", "RSS feed"),
+        ("/pages/me", "me"),
     ),
 }
 
@@ -170,19 +172,6 @@ THEME_COLOR = '#5670d4'
 # bootstrap4 supports: navbar_light (defaults to False)
 THEME_CONFIG = {
     DEFAULT_LANG: {
-        # Show the latest featured post in a large box, with the previewimage as its background.
-        'featured_large': False,
-        # Show the first (remaining) two featured posts in small boxes.
-        'featured_small': False,
-        # Show featured posts on mobile.
-        'featured_on_mobile': True,
-        # Show image in `featured_large` on mobile.
-        # `featured_small` displays them only on desktop.
-        'featured_large_image_on_mobile': True,
-        # Strip HTML from featured post text.
-        'featured_strip_html': False,
-        # Contents of the sidebar, If empty, the sidebar is not displayed.
-        'sidebar': ''
     }
 }
 
@@ -557,6 +546,7 @@ HIDDEN_AUTHORS = ['Guest']
 # output / TRANSLATION[lang] / INDEX_PATH / index-*.html
 # (translatable)
 # INDEX_PATH = ""
+INDEX_PATH = "blog"
 
 # Optional HTML that displayed on “main” blog index.html files.
 # May be used for a greeting. (translatable)
@@ -634,7 +624,8 @@ ATOM_FILENAME_BASE = "feed"
 # relative URL.
 #
 # If you don't need any of these, just set to []
-REDIRECTIONS = []
+# REDIRECTIONS = []
+REDIRECTIONS = [("/", "/blog")]
 
 # Presets of commands to execute to deploy. Can be anything, for
 # example, you may use rsync:
@@ -856,6 +847,7 @@ IMAGE_FOLDERS = {'images': 'images'}
 # If the following is True, INDEXES_PAGES is also displayed on the main (the
 # newest) index page (index.html):
 # INDEXES_PAGES_MAIN = False
+INDEXES_PAGES_MAIN = True
 #
 # If the following is True, index-1.html has the oldest posts, index-2.html the
 # second-oldest posts, etc., and index.html has the newest posts. This ensures
@@ -917,6 +909,7 @@ IMAGE_FOLDERS = {'images': 'images'}
 
 # Show teasers (instead of full posts) in indexes? Defaults to False.
 # INDEX_TEASERS = False
+INDEX_TEASERS = True
 
 # HTML fragments with the Read more... links.
 # The following tags exist and are replaced for you:
