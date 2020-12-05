@@ -6,31 +6,39 @@
     xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9
                         http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
  <url>
-  <loc>https://example.com/</loc>
-  <lastmod>2020-10-16T17:45:00Z</lastmod>
+  <loc>https://alexjuda.github.io/sparagus/</loc>
+  <lastmod>2020-12-05T22:31:00Z</lastmod>
  </url>
  <url>
-  <loc>https://example.com/2020/</loc>
-  <lastmod>2020-10-16T17:45:00Z</lastmod>
+  <loc>https://alexjuda.github.io/sparagus/2020/</loc>
+  <lastmod>2020-12-05T22:31:00Z</lastmod>
  </url>
  <url>
-  <loc>https://example.com/archive.html</loc>
-  <lastmod>2020-10-16T17:46:00Z</lastmod>
+  <loc>https://alexjuda.github.io/sparagus/archive.html</loc>
+  <lastmod>2020-12-05T22:31:00Z</lastmod>
  </url>
  <url>
-  <loc>https://example.com/categories/</loc>
-  <lastmod>2020-10-16T17:45:00Z</lastmod>
+  <loc>https://alexjuda.github.io/sparagus/blog/</loc>
+  <lastmod>2020-12-05T22:31:00Z</lastmod>
  </url>
  <url>
-  <loc>https://example.com/galleries/</loc>
-  <lastmod>2020-10-16T17:45:00Z</lastmod>
+  <loc>https://alexjuda.github.io/sparagus/categories/</loc>
+  <lastmod>2020-12-05T22:31:00Z</lastmod>
  </url>
  <url>
-  <loc>https://example.com/listings/</loc>
-  <lastmod>2020-10-16T17:45:00Z</lastmod>
+  <loc>https://alexjuda.github.io/sparagus/galleries/</loc>
+  <lastmod>2020-12-05T22:31:00Z</lastmod>
  </url>
  <url>
-  <loc>https://example.com/posts/nlu-is-just-slot-filling/</loc>
-  <lastmod>2020-10-16T17:45:00Z</lastmod>
+  <loc>https://alexjuda.github.io/sparagus/listings/</loc>
+  <lastmod>2020-12-05T22:31:00Z</lastmod>
+ </url>
+ <url>
+  <loc>https://alexjuda.github.io/sparagus/pages/me/</loc>
+  <lastmod>2020-12-05T22:31:00Z</lastmod>
+ </url>
+ <url>
+  <loc>https://alexjuda.github.io/sparagus/posts/nlu-is-just-slot-filling/</loc>
+  <lastmod>2020-12-05T22:31:00Z</lastmod>
  </url>
 </urlset>

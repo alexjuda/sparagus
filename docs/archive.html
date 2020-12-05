@@ -11,7 +11,7 @@ og: http://ogp.me/ns# article: http://ogp.me/ns/article#
 <meta name="theme-color" content="#5670d4">
 <meta name="generator" content="Nikola (getnikola.com)">
 <link rel="alternate" type="application/rss+xml" title="RSS" hreflang="en" href="rss.xml">
-<link rel="canonical" href="https://example.com/archive.html">
+<link rel="canonical" href="https://alexjuda.github.io/sparagus/archive.html">
 <!--[if lt IE 9]><script src="assets/js/html5.js"></script><![endif]-->
 </head>
 <body>
@@ -20,7 +20,8 @@ og: http://ogp.me/ns# article: http://ogp.me/ns/article#
 <!-- Menubar -->
 
 <nav class="navbar navbar-expand-md static-top mb-4
-navbar-dark bg-dark
+navbar-dark
+bg-dark
 "><div class="container">
 <!-- This keeps the margins nice -->
         <a class="navbar-brand" href=".">
@@ -33,14 +34,11 @@ navbar-dark bg-dark
 
         <div class="collapse navbar-collapse" id="bs-navbar">
             <ul class="navbar-nav mr-auto">
-<li class="nav-item active">
-<a href="#" class="nav-link">Archive <span class="sr-only">(active)</span></a>
+<li class="nav-item">
+<a href="blog/" class="nav-link">blog</a>
                 </li>
 <li class="nav-item">
-<a href="categories/" class="nav-link">Tags</a>
-                </li>
-<li class="nav-item">
-<a href="rss.xml" class="nav-link">RSS feed</a>
+<a href="pages/me" class="nav-link">me</a>
 
                 
             </li>
@@ -68,9 +66,7 @@ navbar-dark bg-dark
         <script src="assets/js/all-nocdn.js"></script><script>
     baguetteBox.run('div#content', {
         ignoreClass: 'islink',
-        captions: function(element) {
-            return element.getElementsByTagName('img')[0].alt;
-    }});
+        captions: function(element){var i=element.getElementsByTagName('img')[0];return i===undefined?'':i.alt;}});
     </script><script>
     const path = window.location.pathname;
     const url = 'https://sparagus.pythonanywhere.com/ping?path=' + window.location.pathname;

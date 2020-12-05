@@ -15,10 +15,13 @@
 This post is a compilation of my ideas about how NLU should look like in a task-oriented dialog system.
 Any statement without a link is my opinion.
 
+
 ## tl;dr
 
 - [NLU](https://en.wikipedia.org/wiki/Natural-language_understanding) is actually just slot filling
 - use [NER](https://en.wikipedia.org/wiki/Named-entity_recognition) + grammars and a whole text classifier
+
+<!-- TEASER_END -->
 
 # Context
 
